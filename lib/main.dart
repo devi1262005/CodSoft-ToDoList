@@ -14,7 +14,7 @@ class _ToDoPageState extends State<ToDoPage> {
   final _form = GlobalKey<FormState>();
   List<Map<String, dynamic>> tasks = [];
   bool isLoading = true;
-  Map<String, bool> taskVisibility = {}; // Explicitly define type
+  Map<String, bool> taskVisibility = {};
 
   @override
   void initState() {
@@ -28,11 +28,9 @@ class _ToDoPageState extends State<ToDoPage> {
 
     if (storedTasks != null) {
       setState(() {
-        tasks = (json.decode(storedTasks) as List<dynamic>)
-            .cast<Map<String, dynamic>>();
-        // Initialize taskVisibility map
+        tasks = (json.decode(storedTasks) as List<dynamic>).cast<Map<String, dynamic>>();
         tasks.forEach((task) {
-          taskVisibility[task['id'] as String] = false; // Explicitly cast to String
+          taskVisibility[task['id'] as String] = false;
         });
       });
     }
@@ -50,12 +48,12 @@ class _ToDoPageState extends State<ToDoPage> {
         'isChecked': false,
         'dateTime': DateTime.now().toString(),
         'id': DateTime.now().millisecondsSinceEpoch.toString(),
-        'progress': 0, // Progress indicator, starts at 0
+        'progress': 0,
       };
 
       setState(() {
         tasks.add(newTask);
-        taskVisibility[newTask['id'] as String] = false; // Explicitly cast to String
+        taskVisibility[newTask['id'] as String] = false;
       });
 
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -95,7 +93,7 @@ class _ToDoPageState extends State<ToDoPage> {
         tasks[index]['isChecked'] = isChecked;
       });
 
-      _updateTaskProgress(taskId); // Update progress when task is checked/unchecked
+      _updateTaskProgress(taskId);
 
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('tasks', json.encode(tasks));
@@ -109,15 +107,12 @@ class _ToDoPageState extends State<ToDoPage> {
       final subTasks = task['subTasks'] as List<dynamic>;
       final totalSubTasks = subTasks.length;
       if (totalSubTasks > 0) {
-        final completedSubTasks =
-            subTasks.where((subTask) => subTask['isChecked']).length;
-        final progress =
-        (completedSubTasks / totalSubTasks * 100).toInt();
+        final completedSubTasks = subTasks.where((subTask) => subTask['isChecked']).length;
+        final progress = (completedSubTasks / totalSubTasks * 100).toInt();
         setState(() {
           tasks[index]['progress'] = progress;
         });
       } else {
-        // If there are no subtasks, set progress to 100% if task is completed
         final isChecked = task['isChecked'] ?? false;
         final progress = isChecked ? 100 : 0;
         setState(() {
@@ -127,22 +122,20 @@ class _ToDoPageState extends State<ToDoPage> {
     }
   }
 
-  Future<void> toggleSubTask(
-      String taskId, int subTaskIndex, bool isChecked) async {
+  Future<void> toggleSubTask(String taskId, int subTaskIndex, bool isChecked) async {
     final index = tasks.indexWhere((task) => task['id'] == taskId);
     if (index != -1) {
       setState(() {
         tasks[index]['subTasks'][subTaskIndex]['isChecked'] = isChecked;
       });
 
-      _updateTaskProgress(taskId); // Update progress when subtask is checked/unchecked
+      _updateTaskProgress(taskId);
 
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('tasks', json.encode(tasks));
     }
   }
 
-  // Function to toggle subtasks visibility
   void toggleSubtasksVisibility(String taskId) {
     setState(() {
       taskVisibility[taskId] = !(taskVisibility[taskId] ?? false);
@@ -197,7 +190,6 @@ class _ToDoPageState extends State<ToDoPage> {
   Widget buildTaskList(BuildContext context, String tab) {
     List<Map<String, dynamic>> filteredTasks = [];
     if (tab == 'Tasks') {
-      // Display all tasks, whether completed or not
       filteredTasks = tasks.toList();
     } else if (tab == 'In Progress') {
       filteredTasks = tasks.where((task) => !task['isChecked']).toList();
@@ -225,17 +217,14 @@ class _ToDoPageState extends State<ToDoPage> {
                 final taskName = task['task'] ?? '';
                 final isChecked = task['isChecked'] ?? false;
                 final taskId = task['id'];
-                final taskDateTime =
-                DateTime.parse(task['dateTime']);
-                final progress =
-                calculateTaskProgress(task); // Calculate progress
+                final taskDateTime = DateTime.parse(task['dateTime']);
+                final progress = calculateTaskProgress(task);
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      DateFormat('yyyy-MM-dd').format(
-                          taskDateTime), // Display date
+                      DateFormat('yyyy-MM-dd').format(taskDateTime),
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -245,7 +234,7 @@ class _ToDoPageState extends State<ToDoPage> {
                     Row(
                       children: [
                         Text(
-                          'Progress: $progress%', // Display progress
+                          'Progress: $progress%',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey,
@@ -257,62 +246,28 @@ class _ToDoPageState extends State<ToDoPage> {
                       title: Text(
                         taskName,
                         style: TextStyle(
-                          decoration: isChecked
-                              ? TextDecoration.lineThrough
-                              : null,
+                          decoration: isChecked ? TextDecoration.lineThrough : null,
                         ),
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(Icons.delete),
-                            onPressed: () {
-                              deleteTask(taskId);
-                            },
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.add),
-                            onPressed: () {
-                              _showSubTaskInputDialog(
-                                  context, taskId);
-                            },
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.expand),
-                            onPressed: () {
-                              toggleSubtasksVisibility(
-                                  taskId);
-                            },
-                          ),
-                          Checkbox(
-                            value: isChecked,
-                            onChanged: (bool? value) {
-                              updateTask(taskId,
-                                  isChecked: value ?? false);
-                            },
-                          ),
-                        ],
+                        children: buildTrailingButtons(tab, taskId, isChecked),
                       ),
                     ),
                     if (taskVisibility[taskId] ?? false)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ...List.generate(
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Column(
+                          children: List.generate(
                             task['subTasks'].length,
                                 (subIndex) {
-                              final subTask =
-                              task['subTasks'][subIndex];
+                              final subTask = task['subTasks'][subIndex];
                               return Row(
                                 children: [
                                   Checkbox(
                                     value: subTask['isChecked'],
                                     onChanged: (bool? value) {
-                                      toggleSubTask(
-                                          taskId,
-                                          subIndex,
-                                          value ?? false);
+                                      toggleSubTask(taskId, subIndex, value ?? false);
                                     },
                                   ),
                                   Text(subTask['subTask']),
@@ -320,9 +275,9 @@ class _ToDoPageState extends State<ToDoPage> {
                               );
                             },
                           ),
-                        ],
+                        ),
                       ),
-                    if (!isChecked) Divider(), // Show divider only for tasks that are not checked
+                    Divider(), // Keeps the divider always visible
                   ],
                 );
               },
@@ -334,62 +289,92 @@ class _ToDoPageState extends State<ToDoPage> {
   }
 
 
-  // Function to calculate task progress
   int calculateTaskProgress(Map<String, dynamic> task) {
     bool isChecked = task['isChecked'] ?? false;
     if (isChecked) {
-      return 100; // If main task is checked, progress is 100%
+      return 100;
     } else {
       List<dynamic> subTasks = task['subTasks'] ?? [];
       int totalSubTasks = subTasks.length;
-      int completedSubTasks =
-          subTasks.where((subTask) => subTask['isChecked']).length;
-      return totalSubTasks > 0
-          ? ((completedSubTasks / totalSubTasks) * 100).toInt()
-          : 0;
+      int completedSubTasks = subTasks.where((subTask) => subTask['isChecked']).length;
+      return totalSubTasks > 0 ? ((completedSubTasks / totalSubTasks) * 100).toInt() : 0;
     }
   }
 
-  Future<void> _showTaskInputDialog(BuildContext context) async {
-    String taskName = '';
-    return showDialog(
+  List<Widget> buildTrailingButtons(String tab, String taskId, bool isChecked) {
+    List<Widget> buttons = [];
+    if (tab == 'Tasks') {
+      buttons = [
+        IconButton(
+          icon: Icon(Icons.check),
+          onPressed: () {
+            updateTask(taskId, isChecked: !isChecked);
+          },
+        ),
+        IconButton(
+          icon: Icon(Icons.add),
+          onPressed: () {
+            _showSubTaskInputDialog(context, taskId);
+          },
+        ),
+        IconButton(
+          icon: Icon(taskVisibility[taskId] ?? false ? Icons.expand_less : Icons.expand_more),
+          onPressed: () {
+            toggleSubtasksVisibility(taskId);
+          },
+        ),
+        IconButton(
+          icon: Icon(Icons.delete),
+          onPressed: () {
+            deleteTask(taskId);
+          },
+        ),
+      ];
+    } else {
+      buttons = [
+        IconButton(
+          icon: Icon(taskVisibility[taskId] ?? false ? Icons.expand_less : Icons.expand_more),
+          onPressed: () {
+            toggleSubtasksVisibility(taskId);
+          },
+        ),
+        IconButton(
+          icon: Icon(Icons.delete),
+          onPressed: () {
+            deleteTask(taskId);
+          },
+        ),
+      ];
+    }
+    return buttons;
+  }
+
+  void _showTaskInputDialog(BuildContext context) {
+    final TextEditingController taskController = TextEditingController();
+    showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Add a Task'),
-          content: Form(
-            key: _form,
-            child: TextFormField(
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'Enter task name',
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter a task name';
-                }
-                return null;
-              },
-              onChanged: (value) {
-                taskName = value;
-              },
-            ),
+          title: Text("Add Task"),
+          content: TextField(
+            controller: taskController,
+            decoration: InputDecoration(hintText: "Task name"),
           ),
-          actions: <Widget>[
+          actions: [
             TextButton(
-              child: Text('Cancel'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
+              child: Text("Cancel"),
             ),
             TextButton(
-              child: Text('Add'),
               onPressed: () {
-                if (_form.currentState!.validate()) {
-                  addTask(taskName);
-                  Navigator.of(context).pop();
+                if (taskController.text.isNotEmpty) {
+                  addTask(taskController.text);
                 }
+                Navigator.of(context).pop();
               },
+              child: Text("Add"),
             ),
           ],
         );
@@ -397,47 +382,32 @@ class _ToDoPageState extends State<ToDoPage> {
     );
   }
 
-  Future<void> _showSubTaskInputDialog(
-      BuildContext context, String taskId) async {
-    String subTaskName = '';
-    return showDialog(
+  void _showSubTaskInputDialog(BuildContext context, String taskId) {
+    final TextEditingController subTaskController = TextEditingController();
+    showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Add a Subtask'),
-          content: Form(
-            key: _form,
-            child: TextFormField(
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'Enter subtask name',
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter a subtask name';
-                }
-                return null;
-              },
-              onChanged: (value) {
-                subTaskName = value;
-              },
-            ),
+          title: Text("Add Subtask"),
+          content: TextField(
+            controller: subTaskController,
+            decoration: InputDecoration(hintText: "Subtask name"),
           ),
-          actions: <Widget>[
+          actions: [
             TextButton(
-              child: Text('Cancel'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
+              child: Text("Cancel"),
             ),
             TextButton(
-              child: Text('Add'),
               onPressed: () {
-                if (_form.currentState!.validate()) {
-                  addSubTask(taskId, subTaskName);
-                  Navigator.of(context).pop();
+                if (subTaskController.text.isNotEmpty) {
+                  addSubTask(taskId, subTaskController.text);
                 }
+                Navigator.of(context).pop();
               },
+              child: Text("Add"),
             ),
           ],
         );
@@ -445,6 +415,7 @@ class _ToDoPageState extends State<ToDoPage> {
     );
   }
 }
+
 void main() {
   runApp(MaterialApp(
     home: ToDoPage(),
